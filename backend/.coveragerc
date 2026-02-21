@@ -1,0 +1,3 @@
+[run]
+source = app
+data_file = ${TEMP}/discussion_forum_backend_coverage

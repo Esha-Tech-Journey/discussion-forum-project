@@ -1,0 +1,9 @@
+from enum import Enum
+
+class WSEvents(str, Enum):
+    NEW_COMMENT = "NEW_COMMENT"
+    NEW_THREAD = "NEW_THREAD"
+    NEW_LIKE = "NEW_LIKE"
+    NEW_NOTIFICATION = "NEW_NOTIFICATION"
+    NEW_USER = "NEW_USER"
+    MODERATION_REVIEW = "MODERATION_REVIEW"

@@ -1,0 +1,87 @@
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: var(--spacing-md);
+  padding: var(--spacing-lg) 0;
+}
+
+.button {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  background-color: var(--bg-card);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.button:hover:not(:disabled) {
+  background-color: var(--border);
+  border-color: var(--accent);
+}
+
+.button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.buttonText {
+  display: inline;
+}
+
+.pages {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.pageButton {
+  min-width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--bg-card);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.pageButton:hover {
+  background-color: var(--border);
+  border-color: var(--accent);
+}
+
+.pageButton.active {
+  background-color: var(--accent);
+  border-color: var(--accent);
+  color: white;
+}
+
+.ellipsis {
+  color: var(--text-secondary);
+  padding: 0 var(--spacing-sm);
+}
+
+@media (max-width: 768px) {
+  .buttonText {
+    display: none;
+  }
+
+  .pageButton {
+    min-width: 36px;
+    height: 36px;
+  }
+
+  .pagination {
+    gap: var(--spacing-sm);
+  }
+}

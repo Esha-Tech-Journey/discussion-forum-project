@@ -1,0 +1,2479 @@
+openapi: 3.1.0
+info:
+  title: Advanced Real-Time Discussion Forum API
+  description: Backend API for the discussion forum supporting JWT auth, RBAC, threads,
+    nested comments, likes, notifications, moderation, and websocket updates.
+  version: 1.0.0
+servers:
+- url: http://localhost:8000
+  description: Local backend
+- url: http://localhost
+  description: Nginx reverse proxy
+paths:
+  /api/v1/auth/register:
+    post:
+      tags:
+      - Auth
+      summary: Register User
+      description: Register new user account.
+      operationId: register_user_api_v1_auth_register_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserCreate'
+        required: true
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/auth/login:
+    post:
+      tags:
+      - Auth
+      summary: Login User
+      description: Authenticate user and issue JWT tokens.
+      operationId: login_user_api_v1_auth_login_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/auth/refresh:
+    post:
+      tags:
+      - Auth
+      summary: Refresh Token
+      operationId: refresh_token_api_v1_auth_refresh_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshTokenRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccessTokenResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/auth/change-password:
+    post:
+      tags:
+      - Auth
+      summary: Change Password
+      operationId: change_password_api_v1_auth_change_password_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangePasswordRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/auth/me:
+    get:
+      tags:
+      - Auth
+      summary: Get Current User Profile
+      description: Get authenticated user profile.
+      operationId: get_current_user_profile_api_v1_auth_me_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+      security:
+      - HTTPBearer: []
+    put:
+      tags:
+      - Auth
+      summary: Update Current User Profile
+      operationId: update_current_user_profile_api_v1_auth_me_put
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserUpdate'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+      security:
+      - HTTPBearer: []
+  /api/v1/threads:
+    post:
+      tags:
+      - Threads
+      summary: Create Thread
+      operationId: create_thread_api_v1_threads_post
+      security:
+      - HTTPBearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ThreadCreate'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ThreadResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    get:
+      tags:
+      - Threads
+      summary: List Threads
+      operationId: list_threads_api_v1_threads_get
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+          title: Page
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 100
+          minimum: 1
+          default: 20
+          title: Size
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ThreadListResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/threads/{thread_id}:
+    get:
+      tags:
+      - Threads
+      summary: Get Thread
+      operationId: get_thread_api_v1_threads__thread_id__get
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: thread_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Thread Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ThreadResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    put:
+      tags:
+      - Threads
+      summary: Update Thread
+      operationId: update_thread_api_v1_threads__thread_id__put
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: thread_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Thread Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ThreadUpdate'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ThreadResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    delete:
+      tags:
+      - Threads
+      summary: Delete Thread
+      operationId: delete_thread_api_v1_threads__thread_id__delete
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: thread_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Thread Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/comments:
+    post:
+      tags:
+      - Comments
+      summary: Create Comment
+      operationId: create_comment_api_v1_comments_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CommentCreate'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommentResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+      security:
+      - HTTPBearer: []
+  /api/v1/comments/thread/{thread_id}:
+    get:
+      tags:
+      - Comments
+      summary: List Comments
+      operationId: list_comments_api_v1_comments_thread__thread_id__get
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: thread_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Thread Id
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+          title: Page
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 500
+          minimum: 1
+          default: 100
+          title: Size
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CommentResponse'
+                title: Response List Comments Api V1 Comments Thread  Thread Id  Get
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/comments/{comment_id}:
+    put:
+      tags:
+      - Comments
+      summary: Update Comment
+      operationId: update_comment_api_v1_comments__comment_id__put
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: comment_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Comment Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CommentUpdate'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommentResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    delete:
+      tags:
+      - Comments
+      summary: Delete Comment
+      operationId: delete_comment_api_v1_comments__comment_id__delete
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: comment_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Comment Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/likes:
+    post:
+      tags:
+      - Likes
+      summary: Add Like
+      operationId: add_like_api_v1_likes_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LikeCreate'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LikeResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+      security:
+      - HTTPBearer: []
+    delete:
+      tags:
+      - Likes
+      summary: Remove Like
+      operationId: remove_like_api_v1_likes_delete
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LikeCreate'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+      security:
+      - HTTPBearer: []
+  /api/v1/mentions:
+    get:
+      tags:
+      - Mentions
+      summary: List Mentions
+      operationId: list_mentions_api_v1_mentions_get
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+          title: Page
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 100
+          minimum: 1
+          default: 20
+          title: Size
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MentionListResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/notifications:
+    get:
+      tags:
+      - Notifications
+      summary: Get Notifications
+      operationId: get_notifications_api_v1_notifications_get
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+          title: Page
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 100
+          minimum: 1
+          default: 20
+          title: Size
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationListResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/notifications/{notification_id}/read:
+    patch:
+      tags:
+      - Notifications
+      summary: Mark Notification Read
+      operationId: mark_notification_read_api_v1_notifications__notification_id__read_patch
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: notification_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Notification Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/notifications/read-all:
+    patch:
+      tags:
+      - Notifications
+      summary: Mark All Notifications Read
+      operationId: mark_all_notifications_read_api_v1_notifications_read_all_patch
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationMarkAllReadResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+      security:
+      - HTTPBearer: []
+  /api/v1/notifications/unread-count:
+    get:
+      tags:
+      - Notifications
+      summary: Get Unread Count
+      operationId: get_unread_count_api_v1_notifications_unread_count_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationUnreadCountResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+      security:
+      - HTTPBearer: []
+  /api/v1/moderation:
+    post:
+      tags:
+      - Moderation
+      summary: Create Review
+      operationId: create_review_api_v1_moderation_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ModerationCreate'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModerationResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+      security:
+      - HTTPBearer: []
+  /api/v1/moderation/report:
+    post:
+      tags:
+      - Moderation
+      summary: Report Content
+      operationId: report_content_api_v1_moderation_report_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReportCreate'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModerationResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+      security:
+      - HTTPBearer: []
+  /api/v1/moderation/pending:
+    get:
+      tags:
+      - Moderation
+      summary: Get Pending Reviews
+      operationId: get_pending_reviews_api_v1_moderation_pending_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/ModerationResponse'
+                type: array
+                title: Response Get Pending Reviews Api V1 Moderation Pending Get
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+      security:
+      - HTTPBearer: []
+  /api/v1/moderation/completed:
+    get:
+      tags:
+      - Moderation
+      summary: Get Completed Reviews
+      operationId: get_completed_reviews_api_v1_moderation_completed_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/ModerationResponse'
+                type: array
+                title: Response Get Completed Reviews Api V1 Moderation Completed
+                  Get
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+      security:
+      - HTTPBearer: []
+  /api/v1/moderation/{review_id}:
+    put:
+      tags:
+      - Moderation
+      summary: Update Review
+      operationId: update_review_api_v1_moderation__review_id__put
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: review_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Review Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ModerationUpdate'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModerationResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/moderation/{review_id}/action:
+    post:
+      tags:
+      - Moderation
+      summary: Take Action On Review
+      operationId: take_action_on_review_api_v1_moderation__review_id__action_post
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: review_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Review Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ModerationUpdate'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModerationResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/search/threads:
+    get:
+      tags:
+      - Search
+      summary: Search Threads
+      operationId: search_threads_api_v1_search_threads_get
+      parameters:
+      - name: q
+        in: query
+        required: true
+        schema:
+          type: string
+          minLength: 1
+          title: Q
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+          title: Page
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 100
+          minimum: 1
+          default: 20
+          title: Size
+      - name: searchIn
+        in: query
+        required: false
+        schema:
+          type: string
+          pattern: ^(all|title|content|tags)$
+          default: all
+          title: Searchin
+      - name: sortBy
+        in: query
+        required: false
+        schema:
+          type: string
+          pattern: ^(relevance|recent|popular)$
+          default: relevance
+          title: Sortby
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ThreadSearchResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/search/comments:
+    get:
+      tags:
+      - Search
+      summary: Search Comments
+      operationId: search_comments_api_v1_search_comments_get
+      parameters:
+      - name: q
+        in: query
+        required: true
+        schema:
+          type: string
+          minLength: 1
+          title: Q
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+          title: Page
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 100
+          minimum: 1
+          default: 20
+          title: Size
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommentSearchResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/users/me:
+    get:
+      tags:
+      - Users
+      summary: Get Profile
+      operationId: get_profile_api_v1_users_me_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+      security:
+      - HTTPBearer: []
+  /api/v1/users/suggest:
+    get:
+      tags:
+      - Users
+      summary: Suggest Users
+      operationId: suggest_users_api_v1_users_suggest_get
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: q
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Q
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 20
+          minimum: 1
+          default: 8
+          title: Limit
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/UserSuggestionResponse'
+                title: Response Suggest Users Api V1 Users Suggest Get
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/users/{user_id}/activity:
+    get:
+      tags:
+      - Users
+      summary: Get User Activity
+      operationId: get_user_activity_api_v1_users__user_id__activity_get
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: user_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: User Id
+      - name: limit_threads
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 50
+          minimum: 1
+          default: 10
+          title: Limit Threads
+      - name: limit_comments
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 50
+          minimum: 1
+          default: 10
+          title: Limit Comments
+      - name: limit_likes
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 50
+          minimum: 1
+          default: 10
+          title: Limit Likes
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserActivityResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/users:
+    get:
+      tags:
+      - Users
+      summary: List Users
+      operationId: list_users_api_v1_users_get
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+          title: Page
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 100
+          minimum: 1
+          default: 20
+          title: Size
+      - name: q
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Q
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserListResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/users/role-stats:
+    get:
+      tags:
+      - Users
+      summary: List Users By Role With Stats
+      operationId: list_users_by_role_with_stats_api_v1_users_role_stats_get
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: role_name
+        in: query
+        required: true
+        schema:
+          type: string
+          title: Role Name
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+          title: Page
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 100
+          minimum: 1
+          default: 20
+          title: Size
+      - name: q
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Q
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActiveMemberStatsListResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/users/{user_id}:
+    put:
+      tags:
+      - Users
+      summary: Update User
+      operationId: update_user_api_v1_users__user_id__put
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: user_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: User Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserUpdate'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/users/{user_id}/roles:
+    post:
+      tags:
+      - Users
+      summary: Set User Role
+      operationId: set_user_role_api_v1_users__user_id__roles_post
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: user_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: User Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserRoleUpdate'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /health:
+    get:
+      summary: Health
+      operationId: health_health_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+components:
+  schemas:
+    AccessTokenResponse:
+      properties:
+        access_token:
+          type: string
+          title: Access Token
+      type: object
+      required:
+      - access_token
+      title: AccessTokenResponse
+    ActiveMemberStatsListResponse:
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/ActiveMemberStatsResponse'
+          type: array
+          title: Items
+        total:
+          type: integer
+          title: Total
+        page:
+          type: integer
+          title: Page
+        size:
+          type: integer
+          title: Size
+        pages:
+          type: integer
+          title: Pages
+      type: object
+      required:
+      - items
+      - total
+      - page
+      - size
+      - pages
+      title: ActiveMemberStatsListResponse
+    ActiveMemberStatsResponse:
+      properties:
+        id:
+          type: integer
+          title: Id
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+        updated_at:
+          type: string
+          format: date-time
+          title: Updated At
+        email:
+          type: string
+          title: Email
+        name:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Name
+        avatar_url:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Avatar Url
+        is_active:
+          type: boolean
+          title: Is Active
+        roles:
+          items:
+            $ref: '#/components/schemas/RoleResponse'
+          type: array
+          title: Roles
+          default: []
+        thread_count:
+          type: integer
+          title: Thread Count
+        received_like_count:
+          type: integer
+          title: Received Like Count
+      type: object
+      required:
+      - id
+      - created_at
+      - updated_at
+      - email
+      - name
+      - avatar_url
+      - is_active
+      - thread_count
+      - received_like_count
+      title: ActiveMemberStatsResponse
+    ActivityCommentItem:
+      properties:
+        id:
+          type: integer
+          title: Id
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+        updated_at:
+          type: string
+          format: date-time
+          title: Updated At
+        content:
+          type: string
+          title: Content
+        thread_id:
+          type: integer
+          title: Thread Id
+        thread_title:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Thread Title
+        like_count:
+          type: integer
+          minimum: 0.0
+          title: Like Count
+      type: object
+      required:
+      - id
+      - created_at
+      - updated_at
+      - content
+      - thread_id
+      - like_count
+      title: ActivityCommentItem
+    ActivityLikeItem:
+      properties:
+        id:
+          type: integer
+          title: Id
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+        updated_at:
+          type: string
+          format: date-time
+          title: Updated At
+        target_type:
+          type: string
+          title: Target Type
+        thread_id:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Thread Id
+        thread_title:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Thread Title
+        comment_id:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Comment Id
+        comment_excerpt:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Comment Excerpt
+      type: object
+      required:
+      - id
+      - created_at
+      - updated_at
+      - target_type
+      title: ActivityLikeItem
+    ActivityTagCount:
+      properties:
+        name:
+          type: string
+          title: Name
+        count:
+          type: integer
+          minimum: 0.0
+          title: Count
+      type: object
+      required:
+      - name
+      - count
+      title: ActivityTagCount
+    ActivityThreadItem:
+      properties:
+        id:
+          type: integer
+          title: Id
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+        updated_at:
+          type: string
+          format: date-time
+          title: Updated At
+        title:
+          type: string
+          title: Title
+        tags:
+          items:
+            type: string
+          type: array
+          title: Tags
+          default: []
+        like_count:
+          type: integer
+          minimum: 0.0
+          title: Like Count
+        comment_count:
+          type: integer
+          minimum: 0.0
+          title: Comment Count
+      type: object
+      required:
+      - id
+      - created_at
+      - updated_at
+      - title
+      - like_count
+      - comment_count
+      title: ActivityThreadItem
+    ChangePasswordRequest:
+      properties:
+        email:
+          type: string
+          format: email
+          title: Email
+        old_password:
+          type: string
+          title: Old Password
+        new_password:
+          type: string
+          title: New Password
+      type: object
+      required:
+      - email
+      - old_password
+      - new_password
+      title: ChangePasswordRequest
+    CommentCreate:
+      properties:
+        thread_id:
+          type: integer
+          title: Thread Id
+        content:
+          type: string
+          title: Content
+        parent_comment_id:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Parent Comment Id
+      type: object
+      required:
+      - thread_id
+      - content
+      title: CommentCreate
+    CommentResponse:
+      properties:
+        id:
+          type: integer
+          title: Id
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+        updated_at:
+          type: string
+          format: date-time
+          title: Updated At
+        content:
+          type: string
+          title: Content
+        thread_id:
+          type: integer
+          title: Thread Id
+        author_id:
+          type: integer
+          title: Author Id
+        author:
+          anyOf:
+          - $ref: '#/components/schemas/ThreadAuthor'
+          - type: 'null'
+        parent_comment_id:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Parent Comment Id
+        like_count:
+          type: integer
+          title: Like Count
+          default: 0
+        user_has_liked:
+          type: boolean
+          title: User Has Liked
+          default: false
+        is_deleted:
+          type: boolean
+          title: Is Deleted
+      type: object
+      required:
+      - id
+      - created_at
+      - updated_at
+      - content
+      - thread_id
+      - author_id
+      - parent_comment_id
+      - is_deleted
+      title: CommentResponse
+    CommentSearchResponse:
+      properties:
+        results:
+          items:
+            $ref: '#/components/schemas/CommentResponse'
+          type: array
+          title: Results
+        total:
+          type: integer
+          title: Total
+      type: object
+      required:
+      - results
+      - total
+      title: CommentSearchResponse
+    CommentUpdate:
+      properties:
+        content:
+          type: string
+          title: Content
+      type: object
+      required:
+      - content
+      title: CommentUpdate
+    HTTPValidationError:
+      properties:
+        detail:
+          items:
+            $ref: '#/components/schemas/ValidationError'
+          type: array
+          title: Detail
+      type: object
+      title: HTTPValidationError
+    LikeCreate:
+      properties:
+        thread_id:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Thread Id
+        comment_id:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Comment Id
+      type: object
+      title: LikeCreate
+    LikeResponse:
+      properties:
+        id:
+          type: integer
+          title: Id
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+        updated_at:
+          type: string
+          format: date-time
+          title: Updated At
+        user_id:
+          type: integer
+          title: User Id
+        thread_id:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Thread Id
+        comment_id:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Comment Id
+      type: object
+      required:
+      - id
+      - created_at
+      - updated_at
+      - user_id
+      - thread_id
+      - comment_id
+      title: LikeResponse
+    LoginRequest:
+      properties:
+        email:
+          type: string
+          format: email
+          title: Email
+        password:
+          type: string
+          title: Password
+      type: object
+      required:
+      - email
+      - password
+      title: LoginRequest
+      description: User login payload.
+    MentionListResponse:
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/MentionResponse'
+          type: array
+          title: Items
+        total:
+          type: integer
+          title: Total
+        page:
+          type: integer
+          title: Page
+        size:
+          type: integer
+          title: Size
+      type: object
+      required:
+      - items
+      - total
+      - page
+      - size
+      title: MentionListResponse
+    MentionResponse:
+      properties:
+        id:
+          type: integer
+          title: Id
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+        updated_at:
+          type: string
+          format: date-time
+          title: Updated At
+        mentioned_user_id:
+          type: integer
+          title: Mentioned User Id
+        thread_id:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Thread Id
+        comment_id:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Comment Id
+      type: object
+      required:
+      - id
+      - created_at
+      - updated_at
+      - mentioned_user_id
+      - thread_id
+      - comment_id
+      title: MentionResponse
+    MessageResponse:
+      properties:
+        message:
+          type: string
+          title: Message
+      type: object
+      required:
+      - message
+      title: MessageResponse
+    ModerationCreate:
+      properties:
+        content_type:
+          type: string
+          title: Content Type
+        thread_id:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Thread Id
+        comment_id:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Comment Id
+      type: object
+      required:
+      - content_type
+      title: ModerationCreate
+    ModerationResponse:
+      properties:
+        id:
+          type: integer
+          title: Id
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+        updated_at:
+          type: string
+          format: date-time
+          title: Updated At
+        content_type:
+          type: string
+          title: Content Type
+        thread_id:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Thread Id
+        comment_id:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Comment Id
+        reason:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Reason
+        reviewer_id:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Reviewer Id
+        status:
+          type: string
+          title: Status
+        action_taken:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Action Taken
+      type: object
+      required:
+      - id
+      - created_at
+      - updated_at
+      - content_type
+      - thread_id
+      - comment_id
+      - reason
+      - reviewer_id
+      - status
+      - action_taken
+      title: ModerationResponse
+    ModerationUpdate:
+      properties:
+        status:
+          type: string
+          title: Status
+        action_taken:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Action Taken
+      type: object
+      required:
+      - status
+      title: ModerationUpdate
+    NotificationListResponse:
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/NotificationResponse'
+          type: array
+          title: Items
+        total:
+          type: integer
+          title: Total
+        page:
+          type: integer
+          title: Page
+        size:
+          type: integer
+          title: Size
+      type: object
+      required:
+      - items
+      - total
+      - page
+      - size
+      title: NotificationListResponse
+    NotificationMarkAllReadResponse:
+      properties:
+        updated:
+          type: integer
+          minimum: 0.0
+          title: Updated
+      type: object
+      required:
+      - updated
+      title: NotificationMarkAllReadResponse
+    NotificationResponse:
+      properties:
+        id:
+          type: integer
+          title: Id
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+        updated_at:
+          type: string
+          format: date-time
+          title: Updated At
+        user_id:
+          type: integer
+          title: User Id
+        actor_id:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Actor Id
+        type:
+          type: string
+          title: Type
+        title:
+          type: string
+          title: Title
+        message:
+          type: string
+          title: Message
+        entity_type:
+          type: string
+          title: Entity Type
+        entity_id:
+          type: integer
+          title: Entity Id
+        is_read:
+          type: boolean
+          title: Is Read
+      type: object
+      required:
+      - id
+      - created_at
+      - updated_at
+      - user_id
+      - actor_id
+      - type
+      - title
+      - message
+      - entity_type
+      - entity_id
+      - is_read
+      title: NotificationResponse
+    NotificationUnreadCountResponse:
+      properties:
+        unread_count:
+          type: integer
+          title: Unread Count
+      type: object
+      required:
+      - unread_count
+      title: NotificationUnreadCountResponse
+    RefreshTokenRequest:
+      properties:
+        refresh_token:
+          type: string
+          title: Refresh Token
+      type: object
+      required:
+      - refresh_token
+      title: RefreshTokenRequest
+      description: Refresh token payload.
+    ReportCreate:
+      properties:
+        content_type:
+          type: string
+          title: Content Type
+        thread_id:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Thread Id
+        comment_id:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Comment Id
+        reason:
+          type: string
+          title: Reason
+      type: object
+      required:
+      - content_type
+      - reason
+      title: ReportCreate
+    RoleResponse:
+      properties:
+        id:
+          type: integer
+          title: Id
+        role_name:
+          type: string
+          title: Role Name
+      type: object
+      required:
+      - id
+      - role_name
+      title: RoleResponse
+    ThreadAuthor:
+      properties:
+        id:
+          type: integer
+          title: Id
+        name:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Name
+        email:
+          type: string
+          title: Email
+        avatar_url:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Avatar Url
+      type: object
+      required:
+      - id
+      - email
+      title: ThreadAuthor
+    ThreadCreate:
+      properties:
+        title:
+          type: string
+          title: Title
+        description:
+          type: string
+          title: Description
+        tags:
+          anyOf:
+          - items:
+              type: string
+            type: array
+          - type: 'null'
+          title: Tags
+      type: object
+      required:
+      - title
+      - description
+      title: ThreadCreate
+    ThreadListResponse:
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/ThreadResponse'
+          type: array
+          title: Items
+        total:
+          type: integer
+          title: Total
+        page:
+          type: integer
+          title: Page
+        size:
+          type: integer
+          title: Size
+        pages:
+          type: integer
+          title: Pages
+      type: object
+      required:
+      - items
+      - total
+      - page
+      - size
+      - pages
+      title: ThreadListResponse
+    ThreadResponse:
+      properties:
+        id:
+          type: integer
+          title: Id
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+        updated_at:
+          type: string
+          format: date-time
+          title: Updated At
+        title:
+          type: string
+          title: Title
+        description:
+          type: string
+          title: Description
+        tags:
+          items:
+            type: string
+          type: array
+          title: Tags
+        author_id:
+          type: integer
+          title: Author Id
+        author:
+          anyOf:
+          - $ref: '#/components/schemas/ThreadAuthor'
+          - type: 'null'
+        comment_count:
+          type: integer
+          title: Comment Count
+          default: 0
+        like_count:
+          type: integer
+          title: Like Count
+          default: 0
+        user_has_liked:
+          type: boolean
+          title: User Has Liked
+          default: false
+        is_deleted:
+          type: boolean
+          title: Is Deleted
+      type: object
+      required:
+      - id
+      - created_at
+      - updated_at
+      - title
+      - description
+      - author_id
+      - is_deleted
+      title: ThreadResponse
+    ThreadSearchResponse:
+      properties:
+        results:
+          items:
+            $ref: '#/components/schemas/ThreadResponse'
+          type: array
+          title: Results
+        total:
+          type: integer
+          title: Total
+      type: object
+      required:
+      - results
+      - total
+      title: ThreadSearchResponse
+      description: Search result wrapper.
+    ThreadUpdate:
+      properties:
+        title:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Title
+        description:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Description
+        tags:
+          anyOf:
+          - items:
+              type: string
+            type: array
+          - type: 'null'
+          title: Tags
+      type: object
+      title: ThreadUpdate
+    TokenResponse:
+      properties:
+        access_token:
+          type: string
+          title: Access Token
+        refresh_token:
+          type: string
+          title: Refresh Token
+        token_type:
+          type: string
+          title: Token Type
+          default: bearer
+      type: object
+      required:
+      - access_token
+      - refresh_token
+      title: TokenResponse
+      description: JWT token response.
+    UserActivityResponse:
+      properties:
+        user:
+          $ref: '#/components/schemas/UserResponse'
+        stats:
+          $ref: '#/components/schemas/UserActivityStats'
+        top_tags:
+          items:
+            $ref: '#/components/schemas/ActivityTagCount'
+          type: array
+          title: Top Tags
+          default: []
+        recent_threads:
+          items:
+            $ref: '#/components/schemas/ActivityThreadItem'
+          type: array
+          title: Recent Threads
+          default: []
+        recent_comments:
+          items:
+            $ref: '#/components/schemas/ActivityCommentItem'
+          type: array
+          title: Recent Comments
+          default: []
+        recent_likes:
+          items:
+            $ref: '#/components/schemas/ActivityLikeItem'
+          type: array
+          title: Recent Likes
+          default: []
+      type: object
+      required:
+      - user
+      - stats
+      title: UserActivityResponse
+    UserActivityStats:
+      properties:
+        threads:
+          type: integer
+          minimum: 0.0
+          title: Threads
+        comments:
+          type: integer
+          minimum: 0.0
+          title: Comments
+        likes_given:
+          type: integer
+          minimum: 0.0
+          title: Likes Given
+        likes_received:
+          type: integer
+          minimum: 0.0
+          title: Likes Received
+      type: object
+      required:
+      - threads
+      - comments
+      - likes_given
+      - likes_received
+      title: UserActivityStats
+    UserCreate:
+      properties:
+        email:
+          type: string
+          format: email
+          title: Email
+        password:
+          type: string
+          title: Password
+        name:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Name
+      type: object
+      required:
+      - email
+      - password
+      title: UserCreate
+      description: Request schema for user registration.
+    UserListResponse:
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/UserResponse'
+          type: array
+          title: Items
+        total:
+          type: integer
+          title: Total
+        page:
+          type: integer
+          title: Page
+        size:
+          type: integer
+          title: Size
+        pages:
+          type: integer
+          title: Pages
+      type: object
+      required:
+      - items
+      - total
+      - page
+      - size
+      - pages
+      title: UserListResponse
+    UserResponse:
+      properties:
+        id:
+          type: integer
+          title: Id
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+        updated_at:
+          type: string
+          format: date-time
+          title: Updated At
+        email:
+          type: string
+          title: Email
+        name:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Name
+        avatar_url:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Avatar Url
+        bio:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Bio
+        is_active:
+          type: boolean
+          title: Is Active
+        roles:
+          items:
+            $ref: '#/components/schemas/RoleResponse'
+          type: array
+          title: Roles
+          default: []
+      type: object
+      required:
+      - id
+      - created_at
+      - updated_at
+      - email
+      - name
+      - avatar_url
+      - bio
+      - is_active
+      title: UserResponse
+      description: Public user response schema.
+    UserRoleUpdate:
+      properties:
+        role_name:
+          type: string
+          title: Role Name
+      type: object
+      required:
+      - role_name
+      title: UserRoleUpdate
+    UserSuggestionResponse:
+      properties:
+        id:
+          type: integer
+          title: Id
+        name:
+          type: string
+          title: Name
+        avatar_url:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Avatar Url
+      type: object
+      required:
+      - id
+      - name
+      title: UserSuggestionResponse
+    UserUpdate:
+      properties:
+        name:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Name
+        avatar_url:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Avatar Url
+        bio:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Bio
+        is_active:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          title: Is Active
+      type: object
+      title: UserUpdate
+      description: Update user profile.
+    ValidationError:
+      properties:
+        loc:
+          items:
+            anyOf:
+            - type: string
+            - type: integer
+          type: array
+          title: Location
+        msg:
+          type: string
+          title: Message
+        type:
+          type: string
+          title: Error Type
+      type: object
+      required:
+      - loc
+      - msg
+      - type
+      title: ValidationError
+  securitySchemes:
+    HTTPBearer:
+      type: http
+      scheme: bearer
+tags:
+- name: Auth
+  description: Authentication and profile endpoints.
+- name: Threads
+  description: Thread CRUD and listing.
+- name: Comments
+  description: Comment and reply operations.
+- name: Likes
+  description: Like and unlike operations.
+- name: Mentions
+  description: Mention retrieval operations.
+- name: Notifications
+  description: Notification inbox operations.
+- name: Moderation
+  description: Moderation review workflows.
+- name: Search
+  description: Thread and comment search endpoints.
+- name: Users
+  description: Admin/member user management APIs.
